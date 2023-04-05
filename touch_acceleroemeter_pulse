@@ -25,7 +25,6 @@ void setup() {
   pinMode(TOUCH_PIN, INPUT);
   pulseSensor.analogInput(PulseWire);
   pulseSensor.setThreshold(Threshold);
-
   if (pulseSensor.begin()) {
     Serial.println("We created a pulseSensor Object !");  //This prints one time at Arduino power-up, or on Arduino reset.
   }
@@ -47,22 +46,12 @@ void setup() {
 }
 
 void loop() {
-  
+
+
+  //if (lastState == LOW && currentState == HIGH) {
   currentState = digitalRead(TOUCH_PIN);
-
-  int myBPM = pulseSensor.getBeatsPerMinute();    // Calls function on our pulseSensor object that returns BPM as an "int".
-  if (pulseSensor.sawStartOfBeat()) {             // Constantly test to see if "a beat happened".
-    Serial.println("♥ A HeartBeat Happened ! ");  // If test is "true", print a message "a heartbeat happened".
-    Serial.print("BPM: ");                        // Print phrase "BPM: "
-    Serial.println(myBPM);                        // Print the value inside of myBPM.
-    if (myBPM < 60) {
-      Serial.print("UR DROWSY ");
-    }
-  }
-  delay(2000);  // considered best practice in a simple sketch.
-
-  if (lastState == LOW && currentState == HIGH) {
-
+  while ( currentState == HIGH  ) {
+    currentState = digitalRead(TOUCH_PIN);
     Serial.print(" Sensor is touched ");
 
     int value1 = analogRead(x);
@@ -84,8 +73,22 @@ void loop() {
     if (xValue < minVal || xValue > MaxVal || yValue < minVal || yValue > MaxVal || zValue < minVal || zValue > MaxVal) {  //in case of accident calling to a number 5 times if needed we can add multiple numbers.
       Serial.print("Accident detected \n");
     }
+
+    int myBPM = pulseSensor.getBeatsPerMinute();    // Calls function on our pulseSensor object that returns BPM as an "int".
+    if (pulseSensor.sawStartOfBeat()) {             // Constantly test to see if "a beat happened".
+      Serial.println("♥ A HeartBeat Happened ! ");  // If test is "true", print a message "a heartbeat happened".
+      Serial.print("BPM: ");                        // Print phrase "BPM: "
+      Serial.println(myBPM);                        // Print the value inside of myBPM.
+      if (myBPM < 60) {
+        Serial.print("UR DROWSY ");
+      }
+    }
+
     delay(1000);
   }
+
+
+  //}
 
   lastState = currentState;
 }
