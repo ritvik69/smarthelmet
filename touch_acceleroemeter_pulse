@@ -47,8 +47,6 @@ void setup() {
 
 void loop() {
 
-
-  //if (lastState == LOW && currentState == HIGH) {
   currentState = digitalRead(TOUCH_PIN);
   while ( currentState == HIGH  ) {
     currentState = digitalRead(TOUCH_PIN);
@@ -87,8 +85,4 @@ void loop() {
     delay(1000);
   }
 
-
-  //}
-
-  lastState = currentState;
 }
