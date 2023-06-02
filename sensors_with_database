@@ -1,0 +1,243 @@
+#define TINY_GSM_MODEM_SIM800
+#define USE_ARDUINO_INTERRUPTS true
+#include <SoftwareSerial.h>
+SoftwareSerial sim800l(10, 11);  // connect RX and TX of GSM to D11 and D10 respectively
+#include <TinyGPS++.h>
+#include <PulseSensorPlayground.h>
+
+#include <TinyGsmClient.h>
+#include <PubSubClient.h>
+
+const int BUZZER_PIN = 12;
+int Threshold = 550;
+const int PulseWire = 0;
+
+//connect RX and TX of GPS to D3 and D4 respectively
+int RXPin = 4;
+int TXPin = 3;
+
+double longi = 0;
+double lati = 0;
+
+int GPSBaud = 9600;
+
+
+
+//Network details
+const char apn[] = "my3g";
+const char user[] = "";
+const char pass[] = "";
+
+// MQTT details
+const char* broker = "i87100c4.emqx.cloud";
+const char* topicOut = "shahrulnizam/out";
+const char* topicIn = "shahrulnizam/in";
+const char* mqttuser = "test";
+const char* mqttpass = "test";
+
+TinyGsm modem(sim800l);
+TinyGsmClient client(modem);
+PubSubClient mqtt(client);
+
+// Create a TinyGPS++ object
+TinyGPSPlus gps;
+
+
+
+// Create a software serial port called "gpsSerial"
+SoftwareSerial gpsSerial(RXPin, TXPin);
+
+
+const int TOUCH_PIN = 6;
+
+#define x A1
+#define y A2
+#define z A3
+
+int xsample = 0;
+int ysample = 0;
+int zsample = 0;
+
+#define samples 10
+#define minVal -50
+#define MaxVal 50
+
+int lastState = LOW;  // the previous state from the input pin
+int currentState;     // the current reading from the input pin
+
+
+void setup() {
+  sim800l.begin(9600);
+  gpsSerial.begin(GPSBaud);
+  Serial.begin(9600);
+  Serial.println("System start.");
+  modem.restart();
+  Serial.println("Modem: " + modem.getModemInfo());
+  Serial.println("Searching for telco provider.");
+  if (!modem.waitForNetwork()) {
+    Serial.println("fail");
+    while (true)
+      ;
+  }
+  Serial.println("Connected to telco.");
+  Serial.println("Signal Quality: " + String(modem.getSignalQuality()));
+
+  Serial.println("Connecting to GPRS network.");
+  if (!modem.gprsConnect(apn, user, pass)) {
+    Serial.println("fail");
+    while (true)
+      ;
+  }
+  Serial.println("Connected to GPRS: " + String(apn));
+
+  mqtt.setServer(broker, 1883);
+  mqtt.setCallback(mqttCallback);
+  Serial.println("Connecting to MQTT Broker: " + String(broker));
+  while (mqttConnect() == false) continue;
+  Serial.println();
+  if (pulseSensor.begin()) {
+    Serial.println("We created a pulseSensor Object !");  //This prints one time at Arduino power-up, or on Arduino reset.
+  }
+  pinMode(BUZZER_PIN, OUTPUT);  // set arduino pin to output mode
+  Serial.println("successfully Initialized....");
+
+  for (int i = 0; i < samples; i++) {
+    xsample += analogRead(x);
+    ysample += analogRead(y);
+    zsample += analogRead(z);
+  }
+
+  xsample /= samples;
+  ysample /= samples;
+  zsample /= samples;
+
+  Serial.println(xsample);
+  Serial.println(ysample);
+  Serial.println(zsample);
+
+  delay(1000);
+}
+
+void loop() {
+  bool newdata = false;
+
+  if (Serial.available()) {
+    delay(10);
+    String message = "RITVIK ";
+    while (Serial.available()) message += (char)Serial.read();
+    mqtt.publish(topicOut, message.c_str());
+  }
+
+  if (mqtt.connected()) {
+    mqtt.loop();
+  }
+  currentState = digitalRead(TOUCH_PIN);
+  while (gpsSerial.available() > 0) {
+    currentState = digitalRead(TOUCH_PIN);
+
+    // If 5000 milliseconds pass and there are no characters coming in
+    // over the software serial port, show a "No GPS detected" error
+    delay(500);
+
+    if (currentState == HIGH && gps.encode(gpsSerial.read())) {
+
+      delay(500);
+      if (millis() > 5000 && gps.charsProcessed() < 10) {
+        Serial.println("No GPS detected");
+      }
+
+      Serial.print(" Sensor is touched ");
+
+      delay(500);
+
+      int value1 = analogRead(x);
+      int value2 = analogRead(y);
+      int value3 = analogRead(z);
+
+      int xValue = xsample - value1;
+      int yValue = ysample - value2;
+      int zValue = zsample - value3;
+
+      delay(500);
+
+      Serial.print("x=");
+      Serial.println(xValue);
+      Serial.print("y=");
+      Serial.println(yValue);
+      Serial.print("z=");
+      Serial.println(zValue);
+      delay(2000);
+      //condition for accident detection
+      if (xValue < minVal || xValue > MaxVal || yValue < minVal || yValue > MaxVal || zValue < minVal || zValue > MaxVal && gps.location.isValid()) {  //in case of accident calling to a number 5 times if needed we can add multiple numbers.
+        Serial.print("Accident detected \n");
+        Serial.println("Sending SMS...");
+        sim800l.print("AT+CMGF=1\r");
+        delay(100);
+        sim800l.print("AT+CMGS=\"+919511828474\"\r");  //EX +919876543210
+        delay(500);
+        sim800l.print("ACCIDENT DETECTED ");
+        sim800l.print("http://maps.google.com/maps?q=loc:");
+        sim800l.print(gps.location.lat(), 6);
+        sim800l.print(",");
+        sim800l.print(gps.location.lng(), 6);
+        sim800l.print((char)26);
+        delay(500);
+        sim800l.println();
+        Serial.println("Text Sent.");
+        delay(5000);
+      }
+
+      // int myBPM = pulseSensor.getBeatsPerMinute();    // Calls function on our pulseSensor object that returns BPM as an "int".
+      // if (pulseSensor.sawStartOfBeat()) {             // Constantly test to see if "a beat happened".
+      //   Serial.println("♥ A HeartBeat Happened ! ");  // If test is "true", print a message "a heartbeat happened".
+      //   delay(2000);
+      //   Serial.print("BPM: ");  // Print phrase "BPM: "
+      //   Serial.println(myBPM);  // Print the value inside of myBPM.
+      //   if (myBPM < 60) {
+      //     Serial.print("UR DROWSY ");
+      //     digitalWrite(BUZZER_PIN, HIGH);  // turn on Piezo Buzzer
+
+      //   } else if (myBPM > 60) {
+      //     digitalWrite(BUZZER_PIN, LOW);  // turn off Piezo Buzzer
+      //   }
+
+      // }
+    }
+  }
+}
+
+boolean mqttConnect() {
+  if (!mqtt.connect("GsmClientTest", mqttuser, mqttpass)) {
+    Serial.print(".");
+    return false;
+  }
+  Serial.println("Connected to broker.");
+  mqtt.subscribe(topicIn);
+  return mqtt.connected();
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int len) {
+  Serial.print("Message receive: ");
+  Serial.write(payload, len);
+  Serial.println();
+}
+
+void displayInfo() {
+  if (gps.location.isValid()) {
+
+    lati = gps.location.lat();
+    longi = gps.location.lng();
+    Serial.print("Latitude: ");
+    Serial.println(lati);
+    Serial.println(gps.location.lat(), 6);
+    Serial.print("Longitude: ");
+    Serial.println(longi);
+    Serial.println(gps.location.lng(), 6);
+    Serial.print("Altitude: ");
+    Serial.println(gps.altitude.meters());
+
+
+  } else {
+    Serial.println("Location: Not Available");
+  }
+}
