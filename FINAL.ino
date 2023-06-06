@@ -6,6 +6,8 @@ SoftwareSerial sim800l(10, 11);
 int RXPin = 4;
 int TXPin = 3;
 
+const int BUZZER_PIN = 3;  // Arduino pin connected to Buzzer's pin
+
 double longi = 0;
 double lati = 0;
 
@@ -40,6 +42,7 @@ void setup() {
   sim800l.begin(9600);
   gpsSerial.begin(GPSBaud);
   Serial.begin(9600);
+  pinMode(BUZZER_PIN, OUTPUT);  // set arduino pin to output mode
   Serial.println("successfully Initialized....");
 
   for (int i = 0; i < samples; i++) {
@@ -112,7 +115,10 @@ void loop() {
         delay(500);
         sim800l.println();
         Serial.println("Text Sent.");
+        digitalWrite(BUZZER_PIN, HIGH);  // turn on Piezo Buzzer
         delay(5000);
+      } else {
+        digitalWrite(BUZZER_PIN, LOW);  // turn on Piezo Buzzer
       }
     }
   }
