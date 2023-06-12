@@ -13,16 +13,23 @@ mongoose
   .then(() => {
     console.log("mongo connected");
     client.on("message", function (topic, message) {
-      console.log(message.toString());
+      //console.log(message.toString());
+      let data = JSON.parse(message);
+      console.log(data.helmetId);
+      console.log(data.LAT);
+
+      JSON.parse(message);
       const Helmet = mongoose.model("Helmet", {
         model: String,
         latitude: Number,
         longitude: Number,
+        helmetId: Number,
       });
       const helmetInstance = new Helmet({
         model: "Model X",
-        latitude: 23.666,
-        longitude: 78.999,
+        latitude: data.LAT,
+        longitude: data.LONG,
+        helmetId: data.helmetId,
       });
       helmetInstance.save().then(() => console.log("database updated"));
     });
