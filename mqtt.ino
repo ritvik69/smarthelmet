@@ -1,13 +1,15 @@
 #define TINY_GSM_MODEM_SIM800
 
+
 #include <SoftwareSerial.h>
+SoftwareSerial SerialAT(10, 11);  // RX, TX
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
+
 char output[100];
 
-SoftwareSerial SerialAT(10, 11);  // RX, TX
 
 //Network details
 const char apn[] = "my3g";
@@ -84,14 +86,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
   Serial.print("Message receive: ");
   Serial.write(payload, len);
   Serial.println();
-  
-  doc["LAT"]=0;
-  doc["LONG"]=0;
-  doc["helmetId"]=23111;
+
+  doc["LAT"] = 25.22;
+  doc["LONG"] = 17.44;
+  doc["helmetId"] = 23111;
   serializeJson(doc, output);
- 
+
   String message = "RITVIK MC";
   while (Serial.available()) message += (char)Serial.read();
   mqtt.publish(topicOut, output);
-  Serial.print("Message sent back: "); 
+  Serial.print("Message sent back: ");
 }
