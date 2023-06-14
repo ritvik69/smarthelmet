@@ -1,6 +1,6 @@
 #define USE_ARDUINO_INTERRUPTS true
 #include <SoftwareSerial.h>
-SoftwareSerial sim800l(10, 11);
+SoftwareSerial sim800l(10, 11);  // connect RX and TX of GSM to D11 and D10 respectively
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 int RXPin = 4;
@@ -17,6 +17,7 @@ int GPSBaud = 9600;
 TinyGPSPlus gps;
 
 // Create a software serial port called "gpsSerial"
+//connect RX and TX of GPS to D3 and D4 respectively
 SoftwareSerial gpsSerial(RXPin, TXPin);
 
 
