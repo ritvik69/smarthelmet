@@ -2,6 +2,8 @@
 #define y A2
 #define z A3
 
+const int BUZZER_PIN = 3;      
+
 int xsample = 0;
 int ysample = 0;
 int zsample = 0;
@@ -58,6 +60,9 @@ void loop()
   if (xValue < minVal || xValue > MaxVal || yValue < minVal || yValue > MaxVal || zValue < minVal || zValue > MaxVal)
   {
       Serial.print("Accident detected \n");
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(5000);
+      digitalWrite(BUZZER_PIN, LOW);
   }
   
 }
