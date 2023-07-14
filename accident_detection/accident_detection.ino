@@ -26,7 +26,6 @@ void setup()
     zsample += analogRead(z);
   }
 
-
   xsample /= samples;
   ysample /= samples;
   zsample /= samples;
@@ -37,8 +36,6 @@ void setup()
   delay(5000);
 
 }
-
-
 void loop()
 {
   int value1 = analogRead(x);
